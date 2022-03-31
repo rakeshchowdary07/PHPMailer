@@ -34,7 +34,7 @@ class SMTP
      *
      * @var string
      */
-    const VERSION = '6.1.4';
+    const VERSION = '5.2.27';
 
     /**
      * SMTP line break constant.
@@ -104,6 +104,30 @@ class SMTP
      * @var int
      */
     const DEBUG_LOWLEVEL = 4;
+
+    /**
+     * The PHPMailer SMTP Version number.
+     * @var string
+     * @deprecated Use the `VERSION` constant instead
+     * @see SMTP::VERSION
+     */
+    public $Version = '5.2.27';
+
+    /**
+     * SMTP server port number.
+     * @var integer
+     * @deprecated This is only ever used as a default value, so use the `DEFAULT_SMTP_PORT` constant instead
+     * @see SMTP::DEFAULT_SMTP_PORT
+     */
+    public $SMTP_PORT = 25;
+
+    /**
+     * SMTP reply line ending.
+     * @var string
+     * @deprecated Use the `CRLF` constant instead
+     * @see SMTP::CRLF
+     */
+    public $CRLF = "\r\n";
 
     /**
      * Debug output level.

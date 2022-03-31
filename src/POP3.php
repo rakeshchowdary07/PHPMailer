@@ -45,7 +45,7 @@ class POP3
      *
      * @var string
      */
-    const VERSION = '6.1.4';
+    public $Version = '5.2.27';
 
     /**
      * Default POP3 port number.

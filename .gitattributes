@@ -9,8 +9,7 @@
 /.travis.yml export-ignore
 /changelog.md export-ignore
 /docs export-ignore
-/examples export-ignore
-/phpdoc.dist.xml export-ignore
+/README.md export-ignore
+/SECURITY.md export-ignore
 /test export-ignore
 /travis.phpunit.xml.dist export-ignore
-/UPGRADING.md export-ignore

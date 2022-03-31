@@ -30,34 +30,11 @@ namespace PHPMailer\PHPMailer;
  */
 class PHPMailer
 {
-    const CHARSET_ASCII = 'us-ascii';
-    const CHARSET_ISO88591 = 'iso-8859-1';
-    const CHARSET_UTF8 = 'utf-8';
-
-    const CONTENT_TYPE_PLAINTEXT = 'text/plain';
-    const CONTENT_TYPE_TEXT_CALENDAR = 'text/calendar';
-    const CONTENT_TYPE_TEXT_HTML = 'text/html';
-    const CONTENT_TYPE_MULTIPART_ALTERNATIVE = 'multipart/alternative';
-    const CONTENT_TYPE_MULTIPART_MIXED = 'multipart/mixed';
-    const CONTENT_TYPE_MULTIPART_RELATED = 'multipart/related';
-
-    const ENCODING_7BIT = '7bit';
-    const ENCODING_8BIT = '8bit';
-    const ENCODING_BASE64 = 'base64';
-    const ENCODING_BINARY = 'binary';
-    const ENCODING_QUOTED_PRINTABLE = 'quoted-printable';
-
-    const ENCRYPTION_STARTTLS = 'tls';
-    const ENCRYPTION_SMTPS = 'ssl';
-
-    const ICAL_METHOD_REQUEST = 'REQUEST';
-    const ICAL_METHOD_PUBLISH = 'PUBLISH';
-    const ICAL_METHOD_REPLY = 'REPLY';
-    const ICAL_METHOD_ADD = 'ADD';
-    const ICAL_METHOD_CANCEL = 'CANCEL';
-    const ICAL_METHOD_REFRESH = 'REFRESH';
-    const ICAL_METHOD_COUNTER = 'COUNTER';
-    const ICAL_METHOD_DECLINECOUNTER = 'DECLINECOUNTER';
+    /**
+     * The PHPMailer Version number.
+     * @var string
+     */
+    public $Version = '5.2.27';
 
     /**
      * Email priority.
@@ -1540,11 +1517,11 @@ class PHPMailer
 
             // Sign with DKIM if enabled
             if (!empty($this->DKIM_domain)
-                && !empty($this->DKIM_selector)
-                && (!empty($this->DKIM_private_string)
-                    || (!empty($this->DKIM_private)
-                        && static::isPermittedPath($this->DKIM_private)
-                        && file_exists($this->DKIM_private)
+                and !empty($this->DKIM_selector)
+                and (!empty($this->DKIM_private_string)
+                    or (!empty($this->DKIM_private)
+                        and self::isPermittedPath($this->DKIM_private)
+                        and file_exists($this->DKIM_private)
                     )
                 )
             ) {
@@ -1726,9 +1703,7 @@ class PHPMailer
      * Check whether a file path is of a permitted type.
      * Used to reject URLs and phar files from functions that access local file paths,
      * such as addAttachment.
-     *
-     * @param string $path A relative or absolute path to a file
-     *
+     * @param string $path A relative or absolute path to a file.
      * @return bool
      */
     protected static function isPermittedPath($path)
@@ -2118,7 +2093,7 @@ class PHPMailer
         // There is no English translation file
         if ('en' !== $langcode) {
             // Make sure language file path is readable
-            if (!static::isPermittedPath($lang_file) || !file_exists($lang_file)) {
+            if (!self::isPermittedPath($lang_file) or !is_readable($lang_file)) {
                 $foundlang = false;
             } else {
                 // Overwrite language-specific strings.
@@ -2942,11 +2917,10 @@ class PHPMailer
      * Returns false if the file could not be found or read.
      * Explicitly *does not* support passing URLs; PHPMailer is not an HTTP client.
      * If you need to do that, fetch the resource yourself and pass it in via a local file or string.
-     *
-     * @param string $path        Path to the attachment
-     * @param string $name        Overrides the attachment name
-     * @param string $encoding    File encoding (see $Encoding)
-     * @param string $type        File extension (MIME) type
+     * @param string $path Path to the attachment.
+     * @param string $name Overrides the attachment name.
+     * @param string $encoding File encoding (see $Encoding).
+     * @param string $type File extension (MIME) type.
      * @param string $disposition Disposition to use
      *
      * @throws Exception
@@ -2961,8 +2935,8 @@ class PHPMailer
         $disposition = 'attachment'
     ) {
         try {
-            if (!static::isPermittedPath($path) || !@is_file($path)) {
-                throw new Exception($this->lang('file_access') . $path, self::STOP_CONTINUE);
+            if (!self::isPermittedPath($path) or !@is_file($path)) {
+                throw new phpmailerException($this->lang('file_access') . $path, self::STOP_CONTINUE);
             }
 
             // If a MIME type is not specified, try to work it out from the file name
@@ -3146,8 +3120,19 @@ class PHPMailer
     protected function encodeFile($path, $encoding = self::ENCODING_BASE64)
     {
         try {
-            if (!static::isPermittedPath($path) || !file_exists($path)) {
-                throw new Exception($this->lang('file_open') . $path, self::STOP_CONTINUE);
+            if (!self::isPermittedPath($path) or !file_exists($path)) {
+                throw new phpmailerException($this->lang('file_open') . $path, self::STOP_CONTINUE);
+            }
+            $magic_quotes = get_magic_quotes_runtime();
+            if ($magic_quotes) {
+                if (version_compare(PHP_VERSION, '5.3.0', '<')) {
+                    set_magic_quotes_runtime(false);
+                } else {
+                    //Doesn't exist in PHP 5.4, but we don't need to check because
+                    //get_magic_quotes_runtime always returns false in 5.4+
+                    //so it will never get here
+                    ini_set('magic_quotes_runtime', false);
+                }
             }
             $file_buffer = file_get_contents($path);
             if (false === $file_buffer) {
@@ -3519,18 +3504,12 @@ class PHPMailer
      *
      * @return bool True on successfully adding an attachment
      */
-    public function addEmbeddedImage(
-        $path,
-        $cid,
-        $name = '',
-        $encoding = self::ENCODING_BASE64,
-        $type = '',
-        $disposition = 'inline'
-    ) {
-        try {
-            if (!static::isPermittedPath($path) || !@is_file($path)) {
-                throw new Exception($this->lang('file_access') . $path, self::STOP_CONTINUE);
-            }
+    public function addEmbeddedImage($path, $cid, $name = '', $encoding = 'base64', $type = '', $disposition = 'inline')
+    {
+        if (!self::isPermittedPath($path) or !@is_file($path)) {
+            $this->setError($this->lang('file_access') . $path);
+            return false;
+        }
 
             // If a MIME type is not specified, try to work it out from the file name
             if ('' === $type) {
