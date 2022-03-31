@@ -2466,13 +2466,25 @@ class PHPMailer
             case 'inline_attach':
             case 'alt_attach':
             case 'alt_inline_attach':
-                $result .= $this->headerLine('Content-Type', static::CONTENT_TYPE_MULTIPART_MIXED . ';');
-                $result .= $this->textLine(' boundary="' . $this->boundary[1] . '"');
+                if (!empty($this->Ical)) {
+                    $result .= $this->headerLine(
+                        'Content-Class',
+                        'urn:content-classes:calendarmessage'
+                    );
+                }
+                $result .= $this->headerLine('Content-Type', 'multipart/mixed;');
+                $result .= $this->textLine("\tboundary=\"" . $this->boundary[1] . '"');
                 break;
             case 'alt':
             case 'alt_inline':
-                $result .= $this->headerLine('Content-Type', static::CONTENT_TYPE_MULTIPART_ALTERNATIVE . ';');
-                $result .= $this->textLine(' boundary="' . $this->boundary[1] . '"');
+                if (!empty($this->Ical)) {
+                    $result .= $this->headerLine(
+                        'Content-Class',
+                        'urn:content-classes:calendarmessage'
+                    );
+                }
+                $result .= $this->headerLine('Content-Type', 'multipart/alternative;');
+                $result .= $this->textLine("\tboundary=\"" . $this->boundary[1] . '"');
                 break;
             default:
                 // Catches case 'plain': and case '':
@@ -2643,18 +2655,16 @@ class PHPMailer
                 $body .= $this->encodeString($this->Body, $bodyEncoding);
                 $body .= static::$LE;
                 if (!empty($this->Ical)) {
-                    $method = static::ICAL_METHOD_REQUEST;
-                    foreach (static::$IcalMethods as $imethod) {
-                        if (stripos($this->Ical, 'METHOD:' . $imethod) !== false) {
-                            $method = $imethod;
-                            break;
-                        }
-                    }
                     $body .= $this->getBoundary(
-                        $this->boundary[1],
+                        $this->boundary[2],
                         '',
-                        static::CONTENT_TYPE_TEXT_CALENDAR . '; method=' . $method,
-                        ''
+                        'text/calendar; method=REQUEST',
+                        '',
+                        //@link https://blogs.msdn.microsoft.com/webdav_101/2008/02/26/building-vcalendar-content-without-an-microsoft-api-is-not-supported-by-ms/
+                        $this->headerLine(
+                            'Content-Class',
+                            'urn:content-classes:calendarmessage'
+                        )
                     );
                     $body .= $this->encodeString($this->Ical, $this->Encoding);
                     $body .= static::$LE;
@@ -2711,18 +2721,16 @@ class PHPMailer
                 $body .= $this->encodeString($this->Body, $bodyEncoding);
                 $body .= static::$LE;
                 if (!empty($this->Ical)) {
-                    $method = static::ICAL_METHOD_REQUEST;
-                    foreach (static::$IcalMethods as $imethod) {
-                        if (stripos($this->Ical, 'METHOD:' . $imethod) !== false) {
-                            $method = $imethod;
-                            break;
-                        }
-                    }
                     $body .= $this->getBoundary(
                         $this->boundary[2],
                         '',
-                        static::CONTENT_TYPE_TEXT_CALENDAR . '; method=' . $method,
-                        ''
+                        'text/calendar; method=REQUEST',
+                        '',
+                        //@link https://blogs.msdn.microsoft.com/webdav_101/2008/02/26/building-vcalendar-content-without-an-microsoft-api-is-not-supported-by-ms/
+                        $this->headerLine(
+                            'Content-Class',
+                            'urn:content-classes:calendarmessage'
+                        )
                     );
                     $body .= $this->encodeString($this->Ical, $this->Encoding);
                 }
@@ -2837,10 +2845,11 @@ class PHPMailer
      * @param string $charSet
      * @param string $contentType
      * @param string $encoding
+     * @param string $extraheaders Any additional headers for this MIME part
      *
      * @return string
      */
-    protected function getBoundary($boundary, $charSet, $contentType, $encoding)
+    protected function getBoundary($boundary, $charSet, $contentType, $encoding, $extraheaders = '')
     {
         $result = '';
         if ('' === $charSet) {
@@ -2858,6 +2867,9 @@ class PHPMailer
         // RFC1341 part 5 says 7bit is assumed if not specified
         if (static::ENCODING_7BIT !== $encoding) {
             $result .= $this->headerLine('Content-Transfer-Encoding', $encoding);
+        }
+        if (!empty($extraheaders)) {
+            $result .= trim($extraheaders) . static::$LE;
         }
         $result .= static::$LE;
 
@@ -4208,22 +4220,17 @@ class PHPMailer
             'rtf' => 'text/rtf',
             'vcf' => 'text/vcard',
             'vcard' => 'text/vcard',
-            'ics' => 'text/calendar',
-            'xml' => 'text/xml',
-            'xsl' => 'text/xml',
-            'wmv' => 'video/x-ms-wmv',
-            'mpeg' => 'video/mpeg',
-            'mpe' => 'video/mpeg',
-            'mpg' => 'video/mpeg',
-            'mp4' => 'video/mp4',
-            'm4v' => 'video/mp4',
-            'mov' => 'video/quicktime',
-            'qt' => 'video/quicktime',
-            'rv' => 'video/vnd.rn-realvideo',
-            'avi' => 'video/x-msvideo',
+            'ics'   => 'text/calendar',
+            'xml'   => 'text/xml',
+            'xsl'   => 'text/xml',
+            'mpeg'  => 'video/mpeg',
+            'mpe'   => 'video/mpeg',
+            'mpg'   => 'video/mpeg',
+            'mov'   => 'video/quicktime',
+            'qt'    => 'video/quicktime',
+            'rv'    => 'video/vnd.rn-realvideo',
+            'avi'   => 'video/x-msvideo',
             'movie' => 'video/x-sgi-movie',
-            'webm' => 'video/webm',
-            'mkv' => 'video/x-matroska',
         ];
         $ext = strtolower($ext);
         if (array_key_exists($ext, $mimes)) {
